@@ -1,0 +1,9 @@
+2024-06-20 16:04:19,806 - train.py[line:172] in train - INFO: gpu numbers: 1
+2024-06-20 16:04:24,653 - train.py[line:226] in train - INFO: began to validation: 1/20
+2024-06-20 16:04:24,653 - train.py[line:232] in train - INFO: begin to load data
+2024-06-20 16:04:51,667 - train.py[line:235] in train - INFO: data loaded
+2024-06-20 16:04:51,672 - train.py[line:247] in train - INFO: begin to preprocess
+2024-06-20 16:06:54,188 - train.py[line:254] in train - INFO: preprocess down
+2024-06-20 16:06:54,188 - train.py[line:256] in train - INFO: begin to shuffle training data and labels
+2024-06-20 16:06:55,845 - train.py[line:262] in train - INFO: shuffle completed
+2024-06-20 16:06:55,847 - train.py[line:271] in train - INFO: begin to train fold 1...

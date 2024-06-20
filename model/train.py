@@ -23,6 +23,7 @@ from loss_function import weighted_categorical_cross_entropy
 def gpu_settings():
     from tensorflow.compat.v1 import ConfigProto
     from tensorflow.compat.v1 import InteractiveSession
+
     config = ConfigProto()
     config.gpu_options.allow_growth = True
     InteractiveSession(config=config)
@@ -34,14 +35,36 @@ def get_parser() -> argparse.Namespace:
     :return: the arguments after parse
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--gpus", '-g', default='1', help="the number of gpus for training.")
-    parser.add_argument("--modal", '-m', default='1',
-                        help="the way to training model\n\t0: single modal.\n\tmulti modal.")
-    parser.add_argument("--data_dir", '-d', default="./data/sleepedf-2013/npzs", help="where the data is.")
-    parser.add_argument("--output_dir", '-o', default='./result', help="where you wish to set the results.")
-    parser.add_argument("--valid", '-v', default='20', help="v stands for k-fold validation's k.")
-    parser.add_argument("--from_fold", default='0', help="the first fold to train.")
-    parser.add_argument("--train_fold", default='5', help="the folds you want to train this time.")
+    parser.add_argument(
+        "--gpus", "-g", default="1", help="the number of gpus for training."
+    )
+    parser.add_argument(
+        "--modal",
+        "-m",
+        default="1",
+        help="the way to training model\n\t0: single modal.\n\tmulti modal.",
+    )
+    # parser.add_argument("--data_dir", '-d', default="./data/sleepedf-2013/npzs", help="where the data is.")
+    parser.add_argument(
+        "--data_dir",
+        "-d",
+        default="C:\\Users\\a1396\\Desktop\\SalientSleepNet\\sleep_data\\data\\sleep-edf-153\\npzs",
+        help="where the data is.",
+    )
+    # C:\Users\a1396\Desktop\SalientSleepNet\sleep_data\data\sleep-edf-153\npzs
+    parser.add_argument(
+        "--output_dir",
+        "-o",
+        default="./result",
+        help="where you wish to set the results.",
+    )
+    parser.add_argument(
+        "--valid", "-v", default="20", help="v stands for k-fold validation's k."
+    )
+    parser.add_argument("--from_fold", default="0", help="the first fold to train.")
+    parser.add_argument(
+        "--train_fold", default="5", help="the folds you want to train this time."
+    )
 
     args = parser.parse_args()
 
@@ -51,8 +74,12 @@ def get_parser() -> argparse.Namespace:
     os.makedirs(res_path)
 
     # log settings
-    logging.basicConfig(filemode='a', filename=f'{res_path}/log.log', level=logging.DEBUG,
-                        format='%(asctime)s - %(filename)s[line:%(lineno)d] in %(funcName)s - %(levelname)s: %(message)s')
+    logging.basicConfig(
+        filemode="a",
+        filename=f"{res_path}/log.log",
+        level=logging.DEBUG,
+        format="%(asctime)s - %(filename)s[line:%(lineno)d] in %(funcName)s - %(levelname)s: %(message)s",
+    )
 
     k_folds = eval(args.valid)
     if not isinstance(k_folds, int):
@@ -71,7 +98,9 @@ def get_parser() -> argparse.Namespace:
         exit(-1)
     if not (0 <= from_fold <= k_folds):
         logging.critical(f"get an invalid `from_fold`: {from_fold}")
-        print(f"ERROR: the `from_fold` should between 0 and {k_folds}, but get {from_fold}")
+        print(
+            f"ERROR: the `from_fold` should between 0 and {k_folds}, but get {from_fold}"
+        )
         exit(-1)
 
     train_fold = eval(args.train_fold)
@@ -103,10 +132,10 @@ def print_params(params: dict):
     :param params: a dict contain all hyperparameters
     """
     print("=" * 20, "[Hyperparameters]", "=" * 20)
-    for (key, val) in params.items():
+    for key, val in params.items():
         if isinstance(val, dict):
             print(f"{key}:")
-            for (k, v) in val.items():
+            for k, v in val.items():
                 print(f"\t{k}: {v}")
         else:
             print(f"{key}: {val}")
@@ -133,17 +162,17 @@ def train(args: argparse.Namespace, hyper_param_dict: dict) -> dict:
     # fetch gpu numbers
     gpu_num = eval(args.gpus) if 1 <= eval(args.gpus) <= 4 else 1
     if gpu_num == 1:
-        os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     elif gpu_num == 2:
-        os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1'
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
     elif gpu_num == 3:
-        os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2'
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2"
     elif gpu_num == 4:
-        os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3'
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
     logging.info(f"gpu numbers: {gpu_num}")
 
     # load data
-    npz_names = glob.glob(os.path.join(args.data_dir, '*.npz'))
+    npz_names = glob.glob(os.path.join(args.data_dir, "*.npz"))
     if len(npz_names) == 0:
         logging.critical(f"Can not find any npz file in {args.data_dir}")
         print("ERROR: Failed to load data")
@@ -164,13 +193,15 @@ def train(args: argparse.Namespace, hyper_param_dict: dict) -> dict:
     npzs_list = np.array_split(npzs_list, k_folds)
 
     # save the split for summary
-    save_dict = {'split': npzs_list}
-    np.savez(os.path.join(res_path, 'split.npz'), **save_dict)
+    save_dict = {"split": npzs_list}
+    np.savez(os.path.join(res_path, "split.npz"), **save_dict)
 
-    sleep_epoch_len = hyper_param_dict['sleep_epoch_len']
+    sleep_epoch_len = hyper_param_dict["sleep_epoch_len"]
 
     # loss function
-    weighted_loss = weighted_categorical_cross_entropy(np.asarray(hyper_param_dict['class_weights']))
+    weighted_loss = weighted_categorical_cross_entropy(
+        np.asarray(hyper_param_dict["class_weights"])
+    )
     print(f"loss weights: {hyper_param_dict['class_weights']}")
 
     # result
@@ -186,8 +217,10 @@ def train(args: argparse.Namespace, hyper_param_dict: dict) -> dict:
     if gpu_num > 1:
         model = multi_gpu_model(model, gpus=gpu_num)
 
-    model.compile(optimizer=hyper_param_dict["optimizer"], loss=weighted_loss, metrics=['acc'])
-    model.save_weights('weights.h5')
+    model.compile(
+        optimizer=hyper_param_dict["optimizer"], loss=weighted_loss, metrics=["acc"]
+    )
+    model.save_weights("weights.h5")
     # k fold training and validation
     for i in range(from_fold, from_fold + train_fold):
         logging.info(f"began to validation: {i + 1}/{k_folds}")
@@ -212,8 +245,12 @@ def train(args: argparse.Namespace, hyper_param_dict: dict) -> dict:
         print("Total epoch number is " + str(epochnumber))
 
         logging.info("begin to preprocess")  # [C, None, group_seq_len * W, H, N]
-        train_data, train_labels = preprocess(train_data_list, train_labels_list, hyper_param_dict['preprocess'], True)
-        val_data, val_labels = preprocess(val_data_list, val_labels_list, hyper_param_dict['preprocess'], True)
+        train_data, train_labels = preprocess(
+            train_data_list, train_labels_list, hyper_param_dict["preprocess"], True
+        )
+        val_data, val_labels = preprocess(
+            val_data_list, val_labels_list, hyper_param_dict["preprocess"], True
+        )
         logging.info("preprocess down")
 
         logging.info("begin to shuffle training data and labels")
@@ -224,43 +261,65 @@ def train(args: argparse.Namespace, hyper_param_dict: dict) -> dict:
         train_labels = train_labels[index]
         logging.info("shuffle completed")
 
-        print(f"train on {train_data.shape[1]} samples, each has {train_data.shape[2] / sleep_epoch_len} sleep epochs")
-        print(f"validate on {val_data.shape[1]} samples, each has {val_data.shape[2] / sleep_epoch_len} sleep epochs")
+        print(
+            f"train on {train_data.shape[1]} samples, each has {train_data.shape[2] / sleep_epoch_len} sleep epochs"
+        )
+        print(
+            f"validate on {val_data.shape[1]} samples, each has {val_data.shape[2] / sleep_epoch_len} sleep epochs"
+        )
 
         logging.info(f"begin to train fold {i+1}...")
 
         callback_list = [
-            callbacks.EarlyStopping(monitor='acc', patience=hyper_param_dict['patience']),
-            callbacks.ModelCheckpoint(filepath=os.path.join(res_path, f"fold_{i + 1}_best_model.h5"),
-                                      monitor='val_acc', save_best_only=True, save_weights_only=True)
+            callbacks.EarlyStopping(
+                monitor="acc", patience=hyper_param_dict["patience"]
+            ),
+            callbacks.ModelCheckpoint(
+                filepath=os.path.join(res_path, f"fold_{i + 1}_best_model.h5"),
+                monitor="val_acc",
+                save_best_only=True,
+                save_weights_only=True,
+            ),
         ]
 
         if modal == 0:  # only use EEG, the shape is [None, W * gsl, H, N]
-            history = model.fit(train_data[0], train_labels, epochs=hyper_param_dict['train']['epochs'],
-                                batch_size=hyper_param_dict['train']['batch_size'], callbacks=callback_list,
-                                validation_data=(val_data[0], val_labels), verbose=2)
+            history = model.fit(
+                train_data[0],
+                train_labels,
+                epochs=hyper_param_dict["train"]["epochs"],
+                batch_size=hyper_param_dict["train"]["batch_size"],
+                callbacks=callback_list,
+                validation_data=(val_data[0], val_labels),
+                verbose=2,
+            )
         elif modal == 1:  # use EEG & EOG, the shape is [C, None, W * gsl, H, N]
-            history = model.fit([train_data[0], train_data[1]], train_labels, epochs=hyper_param_dict['train']['epochs'],
-                                batch_size=hyper_param_dict['train']['batch_size'], callbacks=callback_list,
-                                validation_data=([val_data[0], val_data[1]], val_labels), verbose=2)
+            history = model.fit(
+                [train_data[0], train_data[1]],
+                train_labels,
+                epochs=hyper_param_dict["train"]["epochs"],
+                batch_size=hyper_param_dict["train"]["batch_size"],
+                callbacks=callback_list,
+                validation_data=([val_data[0], val_data[1]], val_labels),
+                verbose=2,
+            )
         logging.info(f"fold {i+1} completed.")
 
-        acc_list.append(history.history['acc'])
-        val_acc_list.append(history.history['val_acc'])
-        loss_list.append(history.history['loss'])
-        val_loss_list.append(history.history['val_loss'])
+        acc_list.append(history.history["acc"])
+        val_acc_list.append(history.history["val_acc"])
+        loss_list.append(history.history["loss"])
+        val_loss_list.append(history.history["val_loss"])
 
         K.clear_session()
 
         # clear weights
         model.reset_states()
-        model.load_weights('weights.h5')
+        model.load_weights("weights.h5")
 
     res_dict = {
-        'acc': acc_list,
-        'val_acc': val_acc_list,
-        'loss': loss_list,
-        'val_loss': val_loss_list,
+        "acc": acc_list,
+        "val_acc": val_acc_list,
+        "loss": loss_list,
+        "val_loss": val_loss_list,
     }
     return res_dict
 
@@ -270,9 +329,11 @@ if __name__ == "__main__":
 
     args = get_parser()
 
-    with open("hyperparameters.yaml", encoding='utf-8') as f:
+    with open("./model/hyperparameters.yaml", encoding="utf-8") as f:
         hyper_params = yaml.full_load(f)
     print_params(hyper_params)
 
     train_history = train(args, hyper_params)
-    draw_training_plot(train_history, eval(args.from_fold) + 1, eval(args.train_fold), args.output_dir)
+    draw_training_plot(
+        train_history, eval(args.from_fold) + 1, eval(args.train_fold), args.output_dir
+    )

@@ -1,2 +1,4 @@
 *.edf
 *.npy
+*.npz
+*.zip
